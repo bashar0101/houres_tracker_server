@@ -56,9 +56,9 @@ router.post('/register', async (req, res) => {
     });
 
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    // user.password = await bcrypt.hash(password, salt);
     // using plain text as per user request
-    // user.password = password;
+    user.password = password;
 
     await user.save();
     
@@ -114,8 +114,7 @@ router.post('/login', async (req, res) => {
 
     // i do not want to use bcrypt
     // const isMatch = await bcrypt.compare(password, user.password);
-    const isMatch = await bcrypt.compare(password, user.password);
-    // const isMatch = password === user.password;
+    const isMatch = password === user.password;
     
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid Credentials' });

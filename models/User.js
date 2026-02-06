@@ -23,6 +23,10 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'pending', 'rejected'],
     default: 'pending'
+  },
+  hourlyRate: {
+    type: Number,
+    default: 0
   }
 });
 
