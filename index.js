@@ -17,6 +17,7 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/work', require('./routes/work'));
 app.use('/api/manager', require('./routes/manager'));
+app.use('/api/companies', require('./routes/companies'));
 
 const seedAdmin = require('./utils/seeder');
 
