@@ -78,7 +78,8 @@ Helper functions and scripts.
 #### `manager.js`
 - **`GET /all-work`**: Fetches work sessions for all employees in the manager's company.
 - **`GET /users`**: Lists all employees in the company.
-- **`PUT /users/:id/role`**: Changes an employee's role between 'user' and 'manager'.
+- **`PUT /users/:id/role`**: Updates an employee's role. Now includes a safety check to ensure the **Company Owner** cannot be demoted.
+- **`GET /users`**: Now populates company information to identify the owner on the frontend.
 - **`GET /requests`**: Shows users who are waiting for approval to join the company.
 - **`PUT /requests/:id`**: Approves or rejects a new user.
 - **`PUT /users/:id/salary`**: Sets the hourly rate for an employee. Used for earnings calculation.
