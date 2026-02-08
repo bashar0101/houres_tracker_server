@@ -29,7 +29,9 @@ router.get('/all-work', [auth, manager], async (req, res) => {
 // @access  Private/Manager
 router.get('/users', [auth, manager], async (req, res) => {
     try {
-        const users = await User.find({ company: req.user.company }).select('-password');
+        const users = await User.find({ company: req.user.company })
+            .select('-password')
+            .populate('company', 'owner');
         res.json(users);
     } catch (err) {
         console.error(err.message);
@@ -47,17 +49,22 @@ router.put('/users/:id/role', [auth, manager], async (req, res) => {
     }
 
     try {
-        let user = await User.findOne({ _id: req.params.id, company: req.user.company });
-        if (!user) return res.status(404).json({ msg: 'User not found' });
+        let userToUpdate = await User.findOne({ _id: req.params.id, company: req.user.company }).populate('company');
+        if (!userToUpdate) return res.status(404).json({ msg: 'User not found' });
 
-        // Prevent manager from demoting themselves
+        // Prevent manager from demoting themselves or the company owner
+        const isOwner = userToUpdate.company.owner.toString() === req.params.id;
+        if (isOwner && role === 'user') {
+            return res.status(400).json({ msg: 'Cannot demote the company owner' });
+        }
+
         if (req.user.id === req.params.id && role === 'user') {
              return res.status(400).json({ msg: 'Cannot demote yourself' });
         }
 
-        user.role = role;
-        await user.save();
-        res.json(user);
+        userToUpdate.role = role;
+        await userToUpdate.save();
+        res.json(userToUpdate);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
