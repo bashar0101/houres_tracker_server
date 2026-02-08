@@ -3,12 +3,13 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Company = require('../models/Company');
 
 // @route   POST api/auth/register
 // @desc    Register user
 // @access  Public
 router.post('/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, type, companyName, companyId } = req.body;
 
   try {
     let user = await User.findOne({ username });
@@ -17,21 +18,60 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ msg: 'User already exists' });
     }
 
+    let company;
+    let role = 'user';
+    let status = 'pending';
+
+    if (type === 'create') {
+        if (!companyName) {
+            return res.status(400).json({ msg: 'Company name is required' });
+        }
+        let existingCompany = await Company.findOne({ name: companyName });
+        if (existingCompany) {
+            return res.status(400).json({ msg: 'Company already exists' });
+        }
+        
+        company = new Company({ name: companyName });
+        role = 'manager';
+        status = 'active';
+
+    } else if (type === 'join') {
+        if (!companyId) {
+            return res.status(400).json({ msg: 'Company selection is required' });
+        }
+        company = await Company.findById(companyId);
+        if (!company) {
+             return res.status(404).json({ msg: 'Company not found' });
+        }
+    } else {
+        return res.status(400).json({ msg: 'Invalid registration type' });
+    }
+
     user = new User({
       username,
       password,
-      role: 'user' // Force default role
+      role,
+      company: company._id,
+      status
     });
 
     const salt = await bcrypt.genSalt(10);
     // user.password = await bcrypt.hash(password, salt);
+    // using plain text as per user request
+    user.password = password;
 
     await user.save();
+    
+    if (type === 'create') {
+        company.owner = user.id;
+        await company.save();
+    }
 
     const payload = {
       user: {
         id: user.id,
-        role: user.role
+        role: user.role,
+        company: user.company
       }
     };
 
@@ -41,7 +81,9 @@ router.post('/register', async (req, res) => {
       { expiresIn: '5d' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token, role: user.role });
+        // If pending, maybe don't return token or client handles it?
+        // Let's return token but client will check status
+        res.json({ token, role: user.role, status: user.status });
       }
     );
   } catch (err) {
@@ -63,6 +105,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid Credentials' });
     }
 
+    if (user.status === 'pending') {
+        return res.status(403).json({ msg: 'Account is pending approval' });
+    }
+    if (user.status === 'rejected') {
+        return res.status(403).json({ msg: 'Account has been rejected' });
+    }
+
     // i do not want to use bcrypt
     // const isMatch = await bcrypt.compare(password, user.password);
     const isMatch = password === user.password;
@@ -74,7 +123,8 @@ router.post('/login', async (req, res) => {
     const payload = {
       user: {
         id: user.id,
-        role: user.role
+        role: user.role,
+        company: user.company
       }
     };
 
@@ -84,7 +134,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '5d' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token, role: user.role });
+        res.json({ token, role: user.role, company: user.company });
       }
     );
   } catch (err) {

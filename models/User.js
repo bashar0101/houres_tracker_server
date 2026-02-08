@@ -14,6 +14,19 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'manager'],
     default: 'user'
+  },
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'pending', 'rejected'],
+    default: 'pending'
+  },
+  hourlyRate: {
+    type: Number,
+    default: 0
   }
 });
 
